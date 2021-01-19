@@ -1,0 +1,32 @@
+* 快速指南
+
+实现在 org-mode 笔记中，快速插入 [[https://github.com/xournalpp/xournalpp][Xournal++]] 手写笔记，并支持选择笔记模板、点击编辑、实时更新预览、自动处理图片、导出为 HTML等功能。
+
+doom 用户配置以下代码安装：
+#+BEGIN_SRC emacs-lisp :tangle "packages.el"
+(package! org-xournal :recipe (:host github :repo "yuchen-lea/org-xournal"))
+#+END_SRC
+
+并配置：
+#+BEGIN_SRC emacs-lisp
+(use-package! org-xouranl
+  :hook (org-mode . org-xournal-mode)
+  :config
+  (setq org-xournal-note-dir "~/Notes/imgs"  ;; xopp 笔记存储目录
+        org-xournal-template-dir "~/.doom.d/resources/" ;; xournal 目标文件存储目录
+        org-xournal-default-template-name "template.xopp" ;; 默认笔记模版名称，应该位于 org-xournal-template-dir
+        org-xournal-bin "/Applications/Xournal++.app/Contents/MacOS/xournalpp" ;; xournal 执行文件
+        )
+  )
+#+END_SRC
+
+调用 =org-xournal-insert-new-image= 选择特定模版后插入 xournal 笔记；
+调用 =org-xournal-insert-new-image-with-default-template= 直接插入默认模版的 xournal 笔记。
+
+* 安装
+* 配置
+* 鸣谢
+
+受此贴 [[https://www.reddit.com/r/orgmode/comments/egasgy/weekly_rorgmode_open_discussion_december_27_2019/][Weekly /r/Orgmode Open Discussion - December 27, 2019 : orgmode]] 启发，借鉴 [[https://github.com/lepisma/org-krita][org-krita]] 的实现方式，开发这个package。
+
+如果您的需求以手绘而非手写笔记为主，建议考虑 [[https://github.com/lepisma/org-krita][org-krita]] 。
