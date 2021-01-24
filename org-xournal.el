@@ -124,16 +124,15 @@ Should located in `org-xournal-template-dir'"
 ;;;; Commands
 
 (defun org-xournal--new-xournal-file-in-default-dir ()
-  (let (
-        (file-name (read-minibuffer "New Xournal file: "
-                                    (format "%s_%s"
-                                            (format-time-string "%Y%m%d_%H%M%S")
-                                            (org-xournal-org-heading-escape (org-entry-get nil "ITEM")))))
-        )
-    (funcall org-xournal-path-format-function file-name)
-    )
-  )
-
+  (let* (
+         (heading (org-entry-get nil "ITEM"))
+         (file-name (read-minibuffer "New Xournal file: "
+                                     (format "%s_%s"
+                                             (format-time-string "%Y%m%d_%H%M%S")
+                                             (if heading
+                                                 (org-xournal-org-heading-escape (org-entry-get nil "ITEM"))
+                                               "")))))
+    (funcall org-xournal-path-format-function file-name)))
 
 (defun org-xournal-org-heading-escape (heading)
   (setq heading (replace-regexp-in-string "\\[.*\\]" "" heading))
