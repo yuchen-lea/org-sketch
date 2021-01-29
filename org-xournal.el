@@ -144,8 +144,7 @@ Should located in `org-xournal-template-dir'"
   (setq heading(replace-regexp-in-string "[öÓ]+" "o" heading))
   ;; whitespace and . to underscores
   (setq heading (replace-regexp-in-string "[ .]+" "_" heading))
-  heading
-  )
+  heading)
 
 (defun org-xournal-path-format-function-default (file-name)
   "The default function of `org-xournal-path-format-function'.
@@ -154,14 +153,11 @@ Get the xournal note file link path by file-name."
                                          org-xournal-note-dir)))
     (if org-xournal-use-relative-filename
         (org-link-escape (file-relative-name absolute-path))
-      (org-link-escape absolute-path))
-    )
-  )
+      (org-link-escape absolute-path))))
 
 (defun org-xournal-process-picture-functon-default (png-path)
   "Process the image png-path after conversion."
-  (call-process-shell-command (format "convert %s -trim -bordercolor '#FFFFFF' -border 25 +repage %s" png-path png-path))
-  )
+  (call-process-shell-command (format "convert %s -trim -bordercolor '#FFFFFF' -border 25 +repage %s" png-path png-path)))
 
 
 (defun org-xournal-get-links ()
@@ -174,8 +170,7 @@ Get the xournal note file link path by file-name."
 
 (defun org-xournal-save-image (xournal-path png-path)
   "Convert XOURNAL-PATH to PNG and write it to PNG-PATH."
-  (call-process-shell-command (format "%s %s -i %s" org-xournal-bin xournal-path png-path))
-  )
+  (call-process-shell-command (format "%s %s -i %s" org-xournal-bin xournal-path png-path)))
 
 (defun org-xournal-get-png (xournal-path)
   "Get png image data from given XOURNAL-PATH."
@@ -186,18 +181,14 @@ Get the xournal note file link path by file-name."
       (org-xournal-save-image xournal-path png-path)
       (if org-xournal-process-picture-after-convert (funcall org-xournal-process-picture-functon png-path))
       (insert-file-contents-literally png-path)
-      (buffer-string))
-    )
-  )
+      (buffer-string))))
 
 (defun org-xournal-make-new-image (output-xournal-path &optional default)
   "Create a new Xournal file based on a template at OUTPUT-XOURNAL-PATH."
   (let ((template
          (if org-xournal-always-use-default-template
              (expand-file-name org-xournal-default-template-name org-xournal-template-dir)
-           (read-file-name "Chose Template:"  org-xournal-template-dir org-xournal-default-template-name t)
-           )
-         ))
+           (read-file-name "Chose Template:"  org-xournal-template-dir org-xournal-default-template-name t))))
     (f-copy template output-xournal-path)))
 
 
@@ -213,10 +204,8 @@ Get the xournal note file link path by file-name."
 
 (defun org-xournal-show-current-link (&optional complete-file link-location description)
   (cl-multiple-value-bind (start end link desc) (org-link-edit--link-data)
-    (let* (
-           (overlay (make-overlay start end))
-           (xournal-path (nth 1 (split-string link ":")))
-           )
+    (let* ((overlay (make-overlay start end))
+           (xournal-path (nth 1 (split-string link ":"))))
       (overlay-put overlay 'display (create-image (org-xournal-get-png xournal-path) 'png t :scale 0.4))
       (push (cons xournal-path overlay) org-xournal-overlays)
       )
@@ -277,8 +266,7 @@ Get the xournal note file link path by file-name."
        (t  ;; TODO need feedback from other os
         (call-process-shell-command (format "%s %s" org-xournal-bin xournal-path))
         ))
-      (org-xournal-add-watcher xournal-path)
-      )))
+      (org-xournal-add-watcher xournal-path))))
 
 (defun org-xournal-export (_path _desc _backend)
   "Export xournal canvas _PATH from Org files.
@@ -299,8 +287,7 @@ Argument _BACKEND refers to export backend."
 
 (org-link-set-parameters org-xournal-link-prefix
                          :follow #'org-xournal-edit
-                         :export #'org-xournal-export
-                         )
+                         :export #'org-xournal-export)
 
 ;;;###autoload
 (defun org-xournal-insert-new-image (output-xournal-path desc)
@@ -311,17 +298,14 @@ Argument _BACKEND refers to export backend."
      (list output-xournal-path desc)))
   (org-xournal-make-new-image output-xournal-path)
   (org-insert-link nil (format "%s:%s" org-xournal-link-prefix output-xournal-path) desc)
-  (org-xournal-show-current-link)
-  )
+  (org-xournal-show-current-link))
 
 ;;;###autoload
 (defun org-xournal-insert-new-image-with-default-template ()
   "Insert new image in current buffer."
   (interactive)
   (let ((org-xournal-always-use-default-template t))
-    (org-xournal-insert-new-image (funcall org-xournal-get-new-filepath) (funcall org-xournal-get-new-desc))
-    )
-  )
+    (org-xournal-insert-new-image (funcall org-xournal-get-new-filepath) (funcall org-xournal-get-new-desc))))
 
 
 ;;;###autoload
