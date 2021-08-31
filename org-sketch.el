@@ -160,7 +160,7 @@ Should located in `org-sketch-xournal-template-dir'"
 ;;;###autoload
 (defun org-sketch-insert (sketch-type sketch-file-path desc)
   "Insert new sketch file in current buffer."
-  (interactive (let* ((sketch-type (ido-completing-read "Select sletch app: "
+  (interactive (let* ((sketch-type (ido-completing-read "Select sketch app: "
                                                         org-sketch-apps))
                       (sketch-file-path (funcall org-sketch-get-new-filepath sketch-type))
                       (desc (funcall org-sketch-get-new-desc)))
@@ -204,7 +204,7 @@ Should located in `org-sketch-xournal-template-dir'"
 (defun org-sketch--new-sketch-file-path (sketch-type)
   (let* ((extension (org-sketch-get-extension-by-prefix sketch-type))
          (heading (org-entry-get nil "ITEM"))
-         (file-name (read-minibuffer "New Xournal file: "
+         (file-name (read-minibuffer "New file: "
                                      (format "%s_%s"
                                              (format-time-string "%Y%m%d_%H%M%S")
                                              (if heading
