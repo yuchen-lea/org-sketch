@@ -50,10 +50,10 @@ For example:
    \"drawio\")"
   :type '(repeat string))
 
-(defcustom org-sketch-note-dir org-directory
+(defcustom org-sketch-note-dir-function (lambda () default-directory)
   "Default directory to save sketch note files, including *.xopp, *.drawio."
   :group 'org-sketch
-  :type 'string
+  :type 'function
   :package-version '(org-sketch . "0.2.0"))
 
 (defcustom org-sketch-process-picture-after-conversion t
@@ -62,7 +62,7 @@ For example:
   :type 'bool
   :package-version '(org-sketch . "0.2.0"))
 
-(defcustom org-sketch-process-picture-functon #'org-sketch-process-picture-functon-default
+(defcustom org-sketch-process-picture-function #'org-sketch-process-picture-function-default
   "Function that process the image which is converted from *.xopp file."
   :group 'org-sketch
   :type 'function
@@ -174,7 +174,9 @@ Should located in `org-sketch-xournal-template-dir'"
   (org-insert-link nil
                    (format "%s:%s" sketch-type sketch-file-path)
                    desc)
-  (org-sketch-show-current-link))
+  (org-sketch-edit sketch-file-path)
+  (org-sketch-show-current-link)
+  (org-sketch-add-watcher sketch-file-path))
 
 
 ;;;###autoload
@@ -228,7 +230,7 @@ Should located in `org-sketch-xournal-template-dir'"
   "The default function of `org-sketch-path-format-function'.
 Get the sketch file link path in default dir by file-name and extension."
   (let ((absolute-path (expand-file-name (format "%s.%s" file-name extension)
-                                         org-sketch-note-dir)))
+                                         (funcall org-sketch-note-dir-function))))
     (if org-sketch-use-relative-filename
         (org-link-escape (file-relative-name absolute-path))
       (org-link-escape absolute-path))))
@@ -276,7 +278,6 @@ Get the sketch file link path in default dir by file-name and extension."
     (with-temp-buffer
       (set-buffer-multibyte nil)
       (org-sketch-save-image sketch-file-path image-path)
-      (if org-sketch-process-picture-after-conversion (funcall org-sketch-process-picture-functon image-path)) ;; TODO depends on sketch app
       (insert-file-contents-literally image-path)
       (buffer-string))))
 
@@ -289,7 +290,8 @@ Get the sketch file link path in default dir by file-name and extension."
                                      image-path))
      ((string= sketch-type "drawio")
       (org-sketch-drawio-save-image sketch-file-path
-                                    image-path)))))
+                                    image-path))))
+        (if org-sketch-process-picture-after-conversion (funcall org-sketch-process-picture-function image-path))) ;; TODO depends on sketch app
 
 (defun org-sketch-xournal-save-image (xournal-path image-path)
   "Convert XOURNAL-PATH to image and write it to IMAGE-PATH."
@@ -299,9 +301,9 @@ Get the sketch file link path in default dir by file-name and extension."
   "Convert DRAWIO-PATH to image and write it to IMAGE-PATH."
   (call-process-shell-command (format "%s %s -x -o %s" org-sketch-drawio-bin drawio-path image-path)))
 
-(defun org-sketch-process-picture-functon-default (png-path)
+(defun org-sketch-process-picture-function-default (png-path)
   "Process the image png-path after conversion."
-  (call-process-shell-command (format "convert %s -trim -bordercolor '#FFFFFF' -border 25 +repage %s" png-path png-path)))
+  (call-process-shell-command (format "mogrify -trim -fuzz 15%% -bordercolor '#FFFFFF' -border 10 %s" png-path)))
 
 (defun org-sketch-hide-all ()
   (dolist (link (org-sketch-get-links))
@@ -317,8 +319,7 @@ Get the sketch file link path in default dir by file-name and extension."
        ((string= sketch-type "xournal")
         (org-sketch-xournal-edit sketch-file-path))
        ((string= sketch-type "drawio")
-        (org-sketch-drawio-edit sketch-file-path)))
-      (org-sketch-add-watcher sketch-file-path))))
+        (org-sketch-drawio-edit sketch-file-path))))))
 
 (defun org-sketch-xournal-edit (sketch-file-path)
   (cond
@@ -340,24 +341,27 @@ Argument _BACKEND refers to export backend."
                     (prog1 png-path
                       (org-sketch-save-image _path png-path))))
       (ascii (format "%s (%s)" (or _desc _path) _path))
-      (latex (format "\\includegraphics[width=\\textheight,height=\\textwidth,keepaspectratio]{%s}"
+      (latex (format "\\includegraphics[width=.9\\linewidth, keepaspectratio]{%s}"
                      (prog1 png-path
                        (org-sketch-save-image _path png-path)))))))
 
 ;;;;; Watcher
 (defun org-sketch-add-watcher (sketch-file-path)
   "Setup auto-refreshing watcher for given sketch file LINK."
-  (let ((desc (file-notify-add-watch sketch-file-path '(change) #'org-sketch-watcher-callback)))
-    (unless (alist-get sketch-file-path org-sketch-watchers nil nil #'string-equal)
+  (unless (alist-get sketch-file-path org-sketch-watchers nil nil #'string-equal)
+    (let ((desc (file-notify-add-watch sketch-file-path '(change) #'org-sketch-watcher-callback)))
       (push (cons sketch-file-path desc) org-sketch-watchers))))
 
-(defun org-sketch-watcher-callback (event)
-  "Callback that runs after xournal files are modified."
-  (let* ((sketch-file-path (org-sketch-event-file-path event))
-         (links (org-sketch-get-links))  ;;TODO get all links?
+(defun org-sketch-find-link (sketch-file-path)
+  (let* ((links (org-sketch-get-links))  ;;TODO get all links?
          (paths (mapcar (lambda (it) (expand-file-name (org-element-property :path it))) links))
          (idx (cl-position sketch-file-path paths :test #'string-equal))) ;; then find current
-    (when idx (org-sketch-show-link (nth idx links)))))
+    (if idx (nth idx links))))
+
+(defun org-sketch-watcher-callback (event)
+  (if (eq (nth 1 event) 'changed)
+      (let ((link (org-sketch-find-link (org-sketch-event-file-path event))))
+        (if link (org-sketch-show-link link)))))
 
 (defun org-sketch-event-file-path (event)
   (if (eq (nth 1 event) 'renamed)
@@ -393,10 +397,11 @@ Argument _BACKEND refers to export backend."
   (if org-sketch-mode (org-sketch-enable) (org-sketch-disable)))
 
 (defun org-sketch-enable ()
-  (unless (file-directory-p org-sketch-note-dir)
-    (make-directory org-sketch-note-dir))
+  (unless (file-directory-p (funcall org-sketch-note-dir-function))
+    (make-directory (funcall org-sketch-note-dir-function)))
   (org-sketch-setup-customized-link)
   (dolist (link (org-sketch-get-links))
+    (org-sketch-add-watcher (org-element-property :path link))
     (org-sketch-show-link link)))
 
 (defun org-sketch-setup-customized-link ()
